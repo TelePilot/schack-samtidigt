@@ -42,25 +42,34 @@ const StartingPosition string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 // Update is called every tick (1/60 [s] by default).
 func (g *Game) Update() error {
 	// Write your game's logical update.
+	//after move
+	// loadFenPosition
+	// g.Position = newFenPosition
 	return nil
 }
 
 func createBoard() [][]Square {
 
 	board := make([][]Square, 8)
-	for x := 0; x < 8; x++ {
-		for y := 0; y < 8; y++ {
+	//Rank is chess for horizontal lines
+	//Files is chess for vertical lines
+	for rank := 0; rank < 8; rank++ {
+		board[rank] = make([]Square, 8)
+		for file := range board[rank] {
+
 			square := Square{
-				PositionX: x*SquareSize + (240 * 0.25),
-				PositionY: y*SquareSize + (240 * 0.25),
+				PositionX: file * SquareSize,
+				PositionY: rank * SquareSize,
 			}
-			if (y+x)%2 == 0 {
+
+			if (rank+file)%2 == 0 {
+				//white square
 				square.Color = color.RGBA{237, 215, 175, 255}
-				board[x] = append(board[x], square)
 			} else {
+				// black square
 				square.Color = color.RGBA{185, 135, 97, 255}
-				board[x] = append(board[x], square)
 			}
+			board[rank][file] = square
 		}
 	}
 	return board
@@ -68,27 +77,31 @@ func createBoard() [][]Square {
 
 // Draw draws the game screen.
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
+
+//Ebitengine matrix is x horizontal and y is vertical
+
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{72, 71, 66, 255})
 	// Write your game's rendering.
-	for _, x := range g.Board {
-		for _, y := range x {
+	for _, rank := range g.Board {
+		for _, file := range rank {
 			s := ebiten.NewImage(SquareSize, SquareSize)
-			s.Fill(y.Color)
+			s.Fill(file.Color)
 			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Translate(float64(y.PositionX), float64(y.PositionY))
+			op.GeoM.Translate(float64(file.PositionX), float64(file.PositionY))
 
 			screen.DrawImage(s, op)
 
 		}
 	}
-	for _, x := range g.Board {
-		for _, y := range x {
-			if y.Piece != nil {
+	// When we add the pieces after the board the z-index is higher
+	for _, rank := range g.Board {
+		for _, file := range rank {
+			if file.Piece != nil {
 				op := &ebiten.DrawImageOptions{}
 				op.GeoM.Scale(0.5, 0.5)
-				op.GeoM.Translate(float64(y.PositionX), float64(y.PositionY))
-				screen.DrawImage(y.Piece, op)
+				op.GeoM.Translate(float64(file.PositionX), float64(file.PositionY))
+				screen.DrawImage(file.Piece, op)
 			}
 
 		}
@@ -121,36 +134,43 @@ func NewGame() *Game {
 }
 
 func loadFenPosition(g *Game) string {
-	x := 0
-	y := 0
+	rank := 0
+	file := 0
 	m := map[string]int{"k": g.PieceValues.King, "p": g.PieceValues.Pawn,
 		"n": g.PieceValues.Knight, "b": g.PieceValues.Bishop, "r": g.PieceValues.Rook, "q": g.PieceValues.Queen}
-	for _, v := range StartingPosition {
+	for _, v := range g.Position {
 		if v == '/' {
-			x++
-			y = 0
+			//New line
+			rank++
+			file = 0
 			continue
 		}
+
 		if unicode.IsDigit(v) {
-			y += int(v)
+			//Skip as many files as digit says
+			file += int(v)
 			continue
 		}
+		//get the piece value from the map
 		p := m[string(unicode.ToLower(v))]
+		//black as baseline
 		c := g.PieceValues.Black
+		//Check if actual rune is white
 		if unicode.IsUpper(v) {
-			// White
+			// change to White
 			c = g.PieceValues.White
 
 		}
-		s := &g.Board[y][x]
+		// Pointer to board square
+		s := &g.Board[rank][file]
 		path := fmt.Sprintf("%d%d.png", p, c)
 		pImg, _, err := ebitenutil.NewImageFromFile("icons/" + path)
 		if err != nil {
 			panic(err)
 		}
-
+		// add piece image to square
 		s.Piece = pImg
-		y++
+		file++
 	}
 	return StartingPosition
 }
