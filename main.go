@@ -14,7 +14,6 @@ type Game struct {
 	ScreenWidth  int
 	ScreenHeight int
 	Board        [][]Square
-	PieceValues  Pieces
 	Position     string
 }
 type Square struct {
@@ -23,20 +22,13 @@ type Square struct {
 	PositionY int
 	Piece     *ebiten.Image
 }
-type Pieces struct {
-	Empty  int
-	King   int
-	Pawn   int
-	Knight int
-	Bishop int
-	Rook   int
-	Queen  int
-	White  int
-	Black  int
-}
 
-const SquareSize int = 32
+const SquareSize int = 64
 const StartingPosition string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+
+// cant be constant why??? is there a better struct for this?
+var PieceValues = map[string]int{"k": 1, "p": 2,
+	"n": 3, "b": 4, "r": 5, "q": 6, "black": 0, "white": 1}
 
 // Update proceeds the game state.
 // Update is called every tick (1/60 [s] by default).
@@ -99,7 +91,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		for _, file := range rank {
 			if file.Piece != nil {
 				op := &ebiten.DrawImageOptions{}
-				op.GeoM.Scale(0.5, 0.5)
 				op.GeoM.Translate(float64(file.PositionX), float64(file.PositionY))
 				screen.DrawImage(file.Piece, op)
 			}
@@ -111,33 +102,23 @@ func (g *Game) Draw(screen *ebiten.Image) {
 // Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
 // If you don't have to adjust the screen size with the outside size, just return a fixed size.
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 240 * 2, 240 * 1.5
+	return g.ScreenWidth, g.ScreenHeight
 }
 
 func NewGame() *Game {
 	g := &Game{}
-	g.ScreenHeight = 480 * 1.5
-	g.ScreenWidth = 480 * 2
-	g.PieceValues.Empty = 0
-	g.PieceValues.King = 1
-	g.PieceValues.Pawn = 2
-	g.PieceValues.Knight = 3
-	g.PieceValues.Bishop = 4
-	g.PieceValues.Rook = 5
-	g.PieceValues.Queen = 6
-	g.PieceValues.White = 1
-	g.PieceValues.Black = 0
+	g.ScreenHeight = 512
+	g.ScreenWidth = 512
 	g.Board = createBoard()
 	g.Position = StartingPosition
 	loadFenPosition(g)
 	return g
 }
 
-func loadFenPosition(g *Game) string {
+func loadFenPosition(g *Game) {
 	rank := 0
 	file := 0
-	m := map[string]int{"k": g.PieceValues.King, "p": g.PieceValues.Pawn,
-		"n": g.PieceValues.Knight, "b": g.PieceValues.Bishop, "r": g.PieceValues.Rook, "q": g.PieceValues.Queen}
+
 	for _, v := range g.Position {
 		if v == '/' {
 			//New line
@@ -152,13 +133,13 @@ func loadFenPosition(g *Game) string {
 			continue
 		}
 		//get the piece value from the map
-		p := m[string(unicode.ToLower(v))]
+		p := PieceValues[string(unicode.ToLower(v))]
 		//black as baseline
-		c := g.PieceValues.Black
+		c := PieceValues["black"]
 		//Check if actual rune is white
 		if unicode.IsUpper(v) {
 			// change to White
-			c = g.PieceValues.White
+			c = PieceValues["white"]
 
 		}
 		// Pointer to board square
@@ -172,7 +153,6 @@ func loadFenPosition(g *Game) string {
 		s.Piece = pImg
 		file++
 	}
-	return StartingPosition
 }
 
 func main() {
